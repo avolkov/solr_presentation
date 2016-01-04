@@ -188,11 +188,50 @@ Add search indexes model in `<app_name>/search_indexes.py`
 In templates directory add search templates file `templates/search/indexes/<app_name>/<model_name>_text.txt`
 The contents of the search template, would look much like regular template. Object variable is taken from an instance of a model returned by `get_model`in
 
-    {% for child in object.gen_form_files %}
-      {{ child.title }}
-      {{ child.description }}
-      {{ child.version_date| date:"F j, Y" }}
-    {% endfor %}
+      {{ object.title }}
+      {{ object.description }}
+      {{ object.version_date| date:"F j, Y" }}
+      {{ object.document_data}}
+
+Add document data extractor to SampleModel in `models.py`
+
+
+Imports
+
+    import pysolr
+    from django.db import models
+    from django.conf import settings
+    ...
+
+File data extractor
+
+    def extract_files(solr_driver, file_paths):
+        for f_path in file_paths:
+            try:
+                with open(f_path, 'rb') as fd:
+                    try:
+                        data = solr_driver.extract(fd, extractOnly=True)
+                        yield extract_content(data['contents'])
+                    except pysolr.SolrError:
+                        pass
+            except FileNotFoundError:
+                pass
+
+Model with a document property -- used for getting text extracted from the documents.
+
+    class SampleModel(models.Model):
+        ...model definitions...
+
+
+        @property
+        def document_data(self):
+            """Return document content for Pdf and Word documents"""
+            solr = pysolr.Solr(
+                settings.HAYSTACK_CONNECTIONS['default']['URL'],
+                timeout=TIMEOUT
+            )
+            return " ".join([x for x in extract_files(solr, self.files)])
+
 
 ## Generating Solr Schema from Django Haystack.
 
