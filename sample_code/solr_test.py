@@ -6,7 +6,7 @@ import os
 from bs4 import BeautifulSoup
 
 
-DST_PATH = 'sample_documents/'
+DST_PATH = '../sample_documents/'
 file_ext = [re.compile(x, re.IGNORECASE) for x in ("[.]doc$", "[.]pdf$", )]
 
 
@@ -40,7 +40,7 @@ def extract_content(solr_data):
     return " ".join(out)
 
 solr = pysolr.Solr(
-    'http://localhost:8983/solr/gettingstarted_shard1_replica1',
+    'http://localhost:8983/solr/gettingstarted',
     timeout=10
 )
 
@@ -56,11 +56,8 @@ for key, val in build_dict(DST_PATH).items():
         content = extract_content(data['contents'])
         index = [{
             'id': key,
-            'title': content
+            '_text_': content
         }]
-        try:
-            solr.add(index)
-        except TypeError as e:
-            print("Skipping: %s " % val)
+        solr.add(index)
 
-res = solr.search("test")
+#res = solr.search("test")
