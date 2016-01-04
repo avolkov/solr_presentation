@@ -60,4 +60,21 @@ for key, val in build_dict(DST_PATH).items():
         }]
         solr.add(index)
 
-#res = solr.search("test")
+
+def search_phrase(text):
+    print()
+    print()
+    print("Searching for: '%s'" % text)
+    res = solr.search(text)
+    print("Search results object ", res)
+    print("The number of results: %d " % len(res.docs))
+    print("The best result ", res.docs[0])
+    import ipdb
+    ipdb.set_trace()
+
+# Exact phrase
+p1 = "Vaccine Administration and Schedule"
+search_phrase(p1)
+# Not exact phrase
+p2 = "Double action handgun loading procedure"
+search_phrase(p2)

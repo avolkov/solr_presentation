@@ -47,14 +47,18 @@ See solr_test.py for code example.
 
 Here I'm going to start up solar with the default configuration, connect to it using pysolr, then extract file content using built in Apache Tika.
 
-### Solr default setup
+## Solr default setup
 
-Downloading, extracting and starting solr
+Download and extract solr
 
     $ wget http://apache.mirror.vexxhost.com/lucene/solr/5.3.1/solr-5.3.1.tgz
     $ tar xzf solr-5.3.1.tgz
     $ cd solr-5.3.1
-    $ ./bin/solr start -e cloud -noprompt
+
+Start solr in [schemaless mode](https://cwiki.apache.org/confluence/display/solr/Schemaless+Mode)
+
+
+    $ ./bin/solr start -e schemaless
 
 When solr starts up successfully something like the following will show up.
 
@@ -65,9 +69,9 @@ Navigate with a browser to solr port, the page will show all kinds of stats.
 
 ![Solr dashboard](screens/solr_0002.png)
 
-### Using PySolr
+## Using PySolr
 
-Installing PySolr
+#### Install
 
     $ pip install pysolr
 
@@ -76,9 +80,11 @@ Connecting to solr
     import pysolr
 
     solr = pysolr.Solr(
-        'http://localhost:8983/solr/gettingstarted_shard1_replica1',
+        'http://localhost:8983/solr/gettingstarted',
         timeout=10
     )
+
+#### Index
 
 Indexing documents, first create a file handle to a document, then pass it to solr.
 
@@ -101,16 +107,62 @@ If you don't want to associate data with that particular filename, or some prepr
 
         solr.add(index)
 
-Searching:
+Data is a dictionary with the following keys
+
+*contents* -- contents of the file, usually some form of raw HTML or XML
+
+*metada* -- document information like the following
+
+    {'modified': ['2014-07-14T15:25:39Z'], 'dcterms:modified': ['2014-07-14T15:25:39Z'], 'Last-Modified': ['2014-07-14T15:25:39Z'], 'stream_source_info': ['file'], 'stream_size': ['859566'], 'created': ['Wed Jul 09 19:37:35 UTC 2014'], 'Content-Type': ['application/pdf'], 'Creation-Date': ['2014-07-09T19:37:35Z'], 'Last-Save-Date': ['2014-07-14T15:25:39Z'], 'pdf:encrypted': ['false'], 'X-Parsed-By': ['org.apache.tika.parser.DefaultParser', 'org.apache.tika.parser.pdf.PDFParser'], 'dc:format': ['application/pdf; version=1.4'], 'dcterms:created': ['2014-07-09T19:37:35Z'], 'pdf:PDFVersion': ['1.4'], 'meta:creation-date': ['2014-07-09T19:37:35Z'], 'xmpTPg:NPages': ['135'], 'stream_name': ['../sample_documents/HP40-102-2014-eng.pdf'], 'date': ['2014-07-14T15:25:39Z'], 'meta:save-date': ['2014-07-14T15:25:39Z']}
+
+*responseHeader* -- solr response metrics
+
+    {'status': 0, 'QTime': 2440}
+
+I use beautiful soup to strip all XML information from the file and pass raw text data to indexer.
+
+#### Search
 
     results = solr.search('indexed token')
 
 
-Deleting single index:
+#### Delete
+
+Single index
 
     solr.delete=(id='that_word_document')
 
-Clearing index
+Clearing indexes
 
     solr.delete=(q='*:*')
 
+### Live demo.
+
+Example documents -- publications.gc.ca
+
+
+
+
+# Solr Debugging
+
+In case weird communication errors in solr appear, insert pdb statement in `/lib/python/site-packages/pysolr.py` on line 444, just before the following statement.
+
+    if response.startswith('<?xml'):
+            # Try a strict XML parse
+            try:
+            ....
+
+
+This usually means that instead of an xml query response, an HTTP error response has occurred.
+Print out the response:
+
+    ipdb> print(response)
+    b'<?xml version="1.0" encoding="UTF-8"?>\n<response>\n<lst name="responseHeader"><int name="status">400</int><int name="QTime">5</int></lst><lst name="error"><str name="msg">Exception writing document id hp40-104-2014-eng.pdf to the index; possible analysis error.</str><int name="code">400</int></lst>\n</response>\n'
+
+Something has gone wrong with solr -- go into solr console and check logging pane:
+
+![Solr logging pane](screens/099-solr-logging.png)
+
+The actual error was:
+
+    aused by: java.lang.IllegalArgumentException: Document contains at least one immense term in field="title" (whose UTF8 encoding is longer than the max length 32766), all of which were skipped.  Please correct the analyzer to not produce such terms.  The prefix of the first immense term is: '[80, 32, 82, 32, 79, 32, 84, 32, 69, 32, 67, 32, 84, 32, 73, 32, 78, 32, 71, 32, 67, 32, 65, 32, 78, 32, 65, 32, 68, 32]...', original message
