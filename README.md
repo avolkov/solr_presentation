@@ -63,11 +63,11 @@ Start solr in [schemaless mode](https://cwiki.apache.org/confluence/display/solr
 When solr starts up successfully something like the following will show up.
 
 
-![Solr startup](screens/solr_0001.png)
+![Solr startup](screens/0001-solr-startup.png)
 
 Navigate with a browser to solr port, the page will show all kinds of stats.
 
-![Solr dashboard](screens/solr_0002.png)
+![Solr dashboard](screens/0002-solr-dashboard.png)
 
 ## Using PySolr
 
@@ -139,8 +139,10 @@ Clearing indexes
 ### Live demo.
 
 Example documents -- publications.gc.ca
+See [solr_test.py](sample_code/solr_test.py)
 
 
+# Setting up Django Haystack
 
 
 # Solr Debugging
